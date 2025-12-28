@@ -1,27 +1,28 @@
 "use client";
 
-import { Download, PaintBucket, Printer, Save, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ColorQuantities } from "@/components/color-quantities";
+import { ColorSelector } from "@/components/color-selector";
+import { Instructions } from "@/components/instructions";
+import { PageHeader } from "@/components/page-header";
+import { SaveLoadButtons } from "@/components/save-load-buttons";
+import { TemplateMap } from "@/components/template-map";
+import { TemplatesHeader } from "@/components/templates-header";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Wrapper } from "@/components/wrapper";
+import {
+  BEAD_COLORS,
+  GRID_SIZE,
+  STORAGE_KEY,
+} from "@/lib/perler-bead.constants";
+import { Eraser, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const GRID_SIZE = 29;
-const BEAD_COLORS = [
-  { name: "Red", value: "#FF0000" },
-  { name: "Blue", value: "#0000FF" },
-  { name: "Green", value: "#00FF00" },
-  { name: "Yellow", value: "#FFFF00" },
-  { name: "Orange", value: "#FFA500" },
-  { name: "Purple", value: "#800080" },
-  { name: "Pink", value: "#FFC0CB" },
-  { name: "Black", value: "#000000" },
-  { name: "White", value: "#FFFFFF" },
-  { name: "Brown", value: "#A52A2A" },
-  { name: "Cyan", value: "#00FFFF" },
-  { name: "Magenta", value: "#FF00FF" },
-  { name: "Grey", value: "#808080" },
-  { name: "Dark Green", value: "#006400" },
-];
-
-const STORAGE_KEY = "perler-bead-design";
+interface Template {
+  id: string;
+  grid: string[][];
+  x: number;
+  y: number;
+}
 
 const createEmptyGrid = (): string[][] => {
   return Array(GRID_SIZE)
@@ -29,8 +30,15 @@ const createEmptyGrid = (): string[][] => {
     .map(() => Array(GRID_SIZE).fill(""));
 };
 
+const createTemplate = (x: number = 0, y: number = 0): Template => ({
+  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  grid: createEmptyGrid(),
+  x,
+  y,
+});
+
 export default function Home() {
-  const [grid, setGrid] = useState<string[][]>(createEmptyGrid);
+  const [templates, setTemplates] = useState<Template[]>([createTemplate()]);
   const [selectedColor, setSelectedColor] = useState<string>(
     BEAD_COLORS[0].value
   );
@@ -38,7 +46,9 @@ export default function Home() {
   const [paintCanMode, setPaintCanMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [hasSaved, setHasSaved] = useState<boolean>(false);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [drawingTemplateId, setDrawingTemplateId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -50,7 +60,34 @@ export default function Home() {
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            setGrid(parsed);
+            // Support both old format (single grid) and new format (templates array)
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id) {
+              setTemplates(parsed);
+            } else if (
+              Array.isArray(parsed) &&
+              parsed.length > 0 &&
+              Array.isArray(parsed[0])
+            ) {
+              // Old format: single grid
+              setTemplates([
+                {
+                  id: Date.now().toString(),
+                  grid: parsed,
+                  x: 0,
+                  y: 0,
+                },
+              ]);
+            } else {
+              setTemplates([createTemplate()]);
+            }
+            // Ensure all templates have x/y coordinates
+            setTemplates((prev) =>
+              prev.map((t) => ({
+                ...t,
+                x: t.x ?? 0,
+                y: t.y ?? 0,
+              }))
+            );
           } catch (e) {
             console.error("Failed to load saved design:", e);
           }
@@ -63,7 +100,7 @@ export default function Home() {
   const saveDesign = useCallback(() => {
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(grid));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
         setSaveMessage("Design saved!");
         setHasSaved(true);
         setTimeout(() => setSaveMessage(""), 2000);
@@ -73,7 +110,7 @@ export default function Home() {
         setTimeout(() => setSaveMessage(""), 2000);
       }
     }
-  }, [grid]);
+  }, [templates]);
 
   const loadDesign = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -81,7 +118,34 @@ export default function Home() {
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          setGrid(parsed);
+          // Support both old format (single grid) and new format (templates array)
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id) {
+            setTemplates(parsed);
+          } else if (
+            Array.isArray(parsed) &&
+            parsed.length > 0 &&
+            Array.isArray(parsed[0])
+          ) {
+            // Old format: single grid
+            setTemplates([
+              {
+                id: Date.now().toString(),
+                grid: parsed,
+                x: 0,
+                y: 0,
+              },
+            ]);
+          } else {
+            setTemplates([createTemplate()]);
+          }
+          // Ensure all templates have x/y coordinates
+          setTemplates((prev) =>
+            prev.map((t) => ({
+              ...t,
+              x: t.x ?? 0,
+              y: t.y ?? 0,
+            }))
+          );
           setSaveMessage("Design loaded!");
           setTimeout(() => setSaveMessage(""), 2000);
         } catch (e) {
@@ -97,89 +161,237 @@ export default function Home() {
   }, []);
 
   const handleBeadClick = useCallback(
-    (row: number, col: number) => {
+    (templateId: string, row: number, col: number) => {
       if (paintCanMode) {
-        setGrid((prev) => {
-          const targetColor = prev[row][col];
-          if (targetColor === selectedColor) return prev; // No need to fill if colors are the same
+        setTemplates((prev) =>
+          prev.map((template) => {
+            if (template.id !== templateId) return template;
+            const targetColor = template.grid[row][col];
+            if (targetColor === selectedColor) return template; // No need to fill if colors are the same
 
-          const newGrid = prev.map((r) => [...r]);
-          const visited = new Set<string>();
-          const queue: [number, number][] = [[row, col]];
+            const newGrid = template.grid.map((r) => [...r]);
+            const visited = new Set<string>();
+            const queue: [number, number][] = [[row, col]];
 
-          while (queue.length > 0) {
-            const [r, c] = queue.shift()!;
-            const key = `${r},${c}`;
+            while (queue.length > 0) {
+              const [r, c] = queue.shift()!;
+              const key = `${r},${c}`;
 
-            // Check bounds
-            if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) continue;
-            if (visited.has(key)) continue;
+              // Check bounds
+              if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) continue;
+              if (visited.has(key)) continue;
 
-            // Check if this cell matches the target color
-            if (newGrid[r][c] !== targetColor) continue;
+              // Check if this cell matches the target color
+              if (newGrid[r][c] !== targetColor) continue;
 
-            visited.add(key);
-            newGrid[r][c] = selectedColor;
+              visited.add(key);
+              newGrid[r][c] = selectedColor;
 
-            // Add neighbors to queue
-            queue.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
-          }
+              // Add neighbors to queue
+              queue.push([r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]);
+            }
 
-          return newGrid;
-        });
+            return { ...template, grid: newGrid };
+          })
+        );
       } else {
-        setGrid((prev) => {
-          const newGrid = [...prev];
-          newGrid[row] = [...newGrid[row]];
-          newGrid[row][col] =
-            prev[row][col] === selectedColor ? "" : selectedColor;
-          return newGrid;
-        });
+        setTemplates((prev) =>
+          prev.map((template) => {
+            if (template.id !== templateId) return template;
+            const newGrid = [...template.grid];
+            newGrid[row] = [...newGrid[row]];
+            newGrid[row][col] =
+              template.grid[row][col] === selectedColor ? "" : selectedColor;
+            return { ...template, grid: newGrid };
+          })
+        );
       }
     },
     [selectedColor, paintCanMode]
   );
 
   const handleMouseDown = useCallback(
-    (row: number, col: number) => {
+    (templateId: string, row: number, col: number) => {
       setIsDrawing(true);
-      handleBeadClick(row, col);
+      setDrawingTemplateId(templateId);
+      handleBeadClick(templateId, row, col);
     },
     [handleBeadClick]
   );
 
   const handleMouseEnter = useCallback(
-    (row: number, col: number) => {
-      if (isDrawing) {
-        handleBeadClick(row, col);
+    (templateId: string, row: number, col: number) => {
+      if (isDrawing && drawingTemplateId === templateId) {
+        handleBeadClick(templateId, row, col);
       }
     },
-    [isDrawing, handleBeadClick]
+    [isDrawing, drawingTemplateId, handleBeadClick]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDrawing(false);
+    setDrawingTemplateId(null);
   }, []);
 
-  const clearGrid = useCallback(() => {
-    setGrid(
-      Array(GRID_SIZE)
-        .fill(null)
-        .map(() => Array(GRID_SIZE).fill(""))
+  const clearGrid = useCallback((templateId: string) => {
+    setTemplates((prev) =>
+      prev.map((template) =>
+        template.id === templateId
+          ? { ...template, grid: createEmptyGrid() }
+          : template
+      )
     );
   }, []);
 
+  const removeTemplate = useCallback((templateId: string) => {
+    setTemplates((prev) =>
+      prev.filter((template) => template.id !== templateId)
+    );
+  }, []);
+
+  const addTemplate = useCallback(
+    (direction: "top" | "bottom" | "left" | "right", referenceId: string) => {
+      setTemplates((prev) => {
+        const referenceTemplate = prev.find((t) => t.id === referenceId);
+        if (!referenceTemplate) return prev;
+
+        let newX = referenceTemplate.x;
+        let newY = referenceTemplate.y;
+
+        switch (direction) {
+          case "top":
+            newY = referenceTemplate.y - 1;
+            break;
+          case "bottom":
+            newY = referenceTemplate.y + 1;
+            break;
+          case "left":
+            newX = referenceTemplate.x - 1;
+            break;
+          case "right":
+            newX = referenceTemplate.x + 1;
+            break;
+        }
+
+        // Check if a template already exists at this position
+        const existingAtPosition = prev.find(
+          (t) => t.x === newX && t.y === newY
+        );
+        if (existingAtPosition) {
+          return prev; // Don't add if position is occupied
+        }
+
+        const newTemplate = createTemplate(newX, newY);
+        return [...prev, newTemplate];
+      });
+    },
+    []
+  );
+
   const calculateColorQuantities = useCallback(() => {
     const quantities: Record<string, number> = {};
-    grid.forEach((row) => {
-      row.forEach((color) => {
-        if (color) {
-          quantities[color] = (quantities[color] || 0) + 1;
-        }
+    templates.forEach((template) => {
+      template.grid.forEach((row) => {
+        row.forEach((color) => {
+          if (color) {
+            quantities[color] = (quantities[color] || 0) + 1;
+          }
+        });
       });
     });
     return quantities;
-  }, [grid]);
+  }, [templates]);
+
+  // Create a memoized map of template positions for fast lookup
+  const templatePositionMap = useMemo(() => {
+    const map = new Set<string>();
+    templates.forEach((t) => {
+      map.add(`${t.x},${t.y}`);
+    });
+    return map;
+  }, [templates]);
+
+  // Memoized function to check if a template exists at a position
+  const hasTemplateAt = useCallback(
+    (x: number, y: number) => {
+      return templatePositionMap.has(`${x},${y}`);
+    },
+    [templatePositionMap]
+  );
+
+  // Check if all templates form a connected component (no orphans)
+  const areTemplatesConnected = useCallback((templateSet: Template[]) => {
+    if (templateSet.length === 0) return true;
+    if (templateSet.length === 1) return true;
+
+    // Create a position set for fast lookup
+    const positionSet = new Set<string>();
+    templateSet.forEach((t) => {
+      positionSet.add(`${t.x},${t.y}`);
+    });
+
+    // Start BFS from the first template
+    const visited = new Set<string>();
+    const queue: [number, number][] = [[templateSet[0].x, templateSet[0].y]];
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift()!;
+      const key = `${x},${y}`;
+
+      if (visited.has(key)) continue;
+      if (!positionSet.has(key)) continue;
+
+      visited.add(key);
+
+      // Add neighbors to queue
+      queue.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+    }
+
+    // All templates should be visited if they're connected
+    return visited.size === templateSet.length;
+  }, []);
+
+  // Check if a template can be removed (won't create orphans)
+  const canRemoveTemplate = useCallback(
+    (templateId: string) => {
+      if (templates.length <= 1) return false;
+
+      const remainingTemplates = templates.filter((t) => t.id !== templateId);
+      return areTemplatesConnected(remainingTemplates);
+    },
+    [templates, areTemplatesConnected]
+  );
+
+  // Arrange templates in a spatial grid layout (memoized)
+  const arrangedTemplates = useMemo((): (Template | null)[][] => {
+    if (templates.length === 0) return [];
+
+    // Find min/max x and y to determine grid bounds
+    const minX = Math.min(...templates.map((t) => t.x));
+    const maxX = Math.max(...templates.map((t) => t.x));
+    const minY = Math.min(...templates.map((t) => t.y));
+    const maxY = Math.max(...templates.map((t) => t.y));
+
+    // Create a 2D grid to hold templates
+    const grid: (Template | null)[][] = [];
+    for (let y = minY; y <= maxY; y++) {
+      grid[y - minY] = [];
+      for (let x = minX; x <= maxX; x++) {
+        grid[y - minY][x - minX] = null;
+      }
+    }
+
+    // Place templates in the grid
+    templates.forEach((template) => {
+      const gridY = template.y - minY;
+      const gridX = template.x - minX;
+      if (grid[gridY] && grid[gridY][gridX] === null) {
+        grid[gridY][gridX] = template;
+      }
+    });
+
+    return grid;
+  }, [templates]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -199,225 +411,363 @@ export default function Home() {
 
   return (
     <div className="main-container min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-8 print:bg-white print:bg-none print:p-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800 print:hidden">
-          Perler Bead Designer
-        </h1>
-        <p className="text-center text-gray-600 mb-8 print:hidden">
-          Click or drag to place beads on the 29×29 grid
-        </p>
+      <Wrapper>
+        <PageHeader />
 
-        <div className="bg-white rounded-lg shadow-xl p-6 mb-6 print:hidden">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-700">
-              Select Color
-            </h2>
-            <button
-              onClick={() => setPaintCanMode(!paintCanMode)}
-              className={`
-                px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 border-2
-                ${
-                  paintCanMode
-                    ? "bg-green-500 text-white border-green-600 hover:bg-green-600 ring-2 ring-green-300 ring-offset-2"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                }
-              `}
-              title="Paint Can Tool - Fill connected areas"
-            >
-              <PaintBucket size={18} />
-              <span>Paint Can</span>
-              {paintCanMode && (
-                <span className="ml-1 text-xs font-bold">ON</span>
-              )}
-            </button>
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-3">
-            {BEAD_COLORS.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => setSelectedColor(color.value)}
-                className={`
-                  h-12 w-full rounded-lg border-2 transition-all transform hover:scale-105
-                  ${
-                    selectedColor === color.value
-                      ? "border-gray-800 ring-2 ring-offset-2 ring-gray-400 scale-110"
-                      : "border-gray-300 hover:border-gray-400"
-                  }
-                `}
-                style={{ backgroundColor: color.value }}
-                title={color.name}
-                aria-label={`Select ${color.name} color`}
-              />
-            ))}
-          </div>
-        </div>
+        <ColorSelector
+          selectedColor={selectedColor}
+          onColorSelect={setSelectedColor}
+          paintCanMode={paintCanMode}
+          onPaintCanModeToggle={() => setPaintCanMode(!paintCanMode)}
+          colors={BEAD_COLORS}
+        />
 
-        <div className="bg-white rounded-lg shadow-xl p-6 mb-6 print:shadow-none print:p-4">
-          <div className="flex justify-between items-center mb-4 print:hidden">
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl font-semibold text-gray-700">
-                Design Grid
-              </h2>
-              {saveMessage && (
-                <span
-                  className={`text-sm font-medium ${
-                    saveMessage.includes("Failed")
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
+        <TemplatesHeader onPrint={handlePrint} />
+      </Wrapper>
+      <div className="print:space-y-0 w-full print:overflow-visible">
+        <ScrollArea className="w-full print:hidden">
+          <ScrollBar
+            orientation="horizontal"
+            className="top-0! left-0! right-0!"
+          />
+          <ScrollBar
+            orientation="horizontal"
+            className="bottom-0! left-0! right-0!"
+          />
+          <div className="p-6 flex flex-col items-center">
+            {arrangedTemplates.map((row, rowIndex) => {
+              return (
+                <div
+                  key={rowIndex}
+                  className="flex items-start justify-center print:block print:justify-center"
+                  style={{
+                    width: "max-content",
+                    minWidth: "100%",
+                    gap: "0.25rem",
+                  }}
                 >
-                  {saveMessage}
-                </span>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrint}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium print:hidden flex items-center gap-2"
-              >
-                <Printer size={18} />
-                Print
-              </button>
-              <button
-                onClick={clearGrid}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium print:hidden flex items-center gap-2"
-              >
-                <Trash2 size={18} />
-                Clear Grid
-              </button>
-            </div>
+                  {row.map((template, colIndex) => {
+                    if (!template) {
+                      // Empty cell needs to match template container width exactly
+                      // Template structure: outer container padding (12px) + grid (520px) + outer container padding (12px) = 544px
+                      // But we need to account for the actual rendered width including the white container
+                      // The template-container div itself has no padding, but the inner bg-white div has p-3 (12px)
+                      // Grid is 520px, so total content width is 544px
+                      // However, we should match the actual template container which includes the white background container
+                      return (
+                        <div
+                          key={`empty-${rowIndex}-${colIndex}`}
+                          className="print:hidden"
+                          style={{
+                            width: "544px",
+                            minHeight: 0,
+                            flexShrink: 0,
+                            boxSizing: "content-box",
+                          }}
+                        />
+                      );
+                    }
+
+                    // Check if templates exist in adjacent positions (for plus buttons)
+                    const hasTop = hasTemplateAt(template.x, template.y - 1);
+                    const hasBottom = hasTemplateAt(template.x, template.y + 1);
+                    const hasLeft = hasTemplateAt(template.x - 1, template.y);
+                    const hasRight = hasTemplateAt(template.x + 1, template.y);
+
+                    // Check if template can be removed (won't create orphaned templates)
+                    const isRemovable = canRemoveTemplate(template.id);
+
+                    return (
+                      <div
+                        key={template.id}
+                        className="template-container print:break-after-page print:break-inside-avoid relative print:w-full print:mb-0"
+                        style={{
+                          flexShrink: 0,
+                          width: "544px",
+                          boxSizing: "content-box",
+                        }}
+                      >
+                        <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-4 print:bg-transparent relative">
+                          {/* Plus buttons positioned absolutely */}
+                          {!hasTop && (
+                            <button
+                              onClick={() => addTemplate("top", template.id)}
+                              className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border-2 border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors print:hidden z-20"
+                              title="Add template above"
+                            >
+                              <Plus size={16} className="text-green-600" />
+                            </button>
+                          )}
+
+                          {!hasBottom && (
+                            <button
+                              onClick={() => addTemplate("bottom", template.id)}
+                              className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border-2 border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors print:hidden z-20"
+                              title="Add template below"
+                            >
+                              <Plus size={16} className="text-green-600" />
+                            </button>
+                          )}
+
+                          {!hasLeft && (
+                            <button
+                              onClick={() => addTemplate("left", template.id)}
+                              className="absolute top-1/2 -translate-y-1/2 -left-4 w-8 h-8 rounded-full border-2 border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors print:hidden z-20"
+                              title="Add template to the left"
+                            >
+                              <Plus size={16} className="text-green-600" />
+                            </button>
+                          )}
+
+                          {!hasRight && (
+                            <button
+                              onClick={() => addTemplate("right", template.id)}
+                              className="absolute top-1/2 -translate-y-1/2 -right-4 w-8 h-8 rounded-full border-2 border-gray-400 bg-white hover:bg-gray-50 flex items-center justify-center transition-colors print:hidden z-20"
+                              title="Add template to the right"
+                            >
+                              <Plus size={16} className="text-green-600" />
+                            </button>
+                          )}
+
+                          <div className="flex flex-col items-center relative">
+                            <div className="hidden print:block text-center mb-2 text-sm font-medium text-gray-700">
+                              Position: {template.x}:{template.y}
+                            </div>
+                            {/* Remove button - top right, outside grid */}
+                            {isRemovable && (
+                              <button
+                                onClick={() => removeTemplate(template.id)}
+                                className="absolute -top-4 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full border-2 border-red-600 flex items-center justify-center transition-colors print:hidden z-20"
+                                title="Remove this template"
+                              >
+                                <X size={14} className="text-white" />
+                              </button>
+                            )}
+                            {/* Clear button - top left, outside grid */}
+                            <button
+                              onClick={() => clearGrid(template.id)}
+                              className="absolute -top-4 -left-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full border-2 border-red-600 flex items-center justify-center transition-colors print:hidden z-20"
+                              title="Clear this template"
+                            >
+                              <Eraser size={14} className="text-white" />
+                            </button>
+                            <div
+                              className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1"
+                              onMouseUp={handleMouseUp}
+                              onMouseLeave={handleMouseUp}
+                            >
+                              <div
+                                className="grid gap-0.5"
+                                style={{
+                                  gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+                                }}
+                              >
+                                {template.grid.map((row, rowIndex) =>
+                                  row.map((color, colIndex) => {
+                                    const isEmpty = !color;
+                                    const isWhite = color === "#FFFFFF";
+
+                                    const cellStyle = isEmpty
+                                      ? {
+                                          backgroundColor: "#FFFFFF",
+                                          borderWidth: "1px",
+                                          borderStyle: "solid",
+                                          borderColor: "#E5E7EB",
+                                          boxShadow: "none",
+                                        }
+                                      : isWhite
+                                      ? {
+                                          backgroundColor: "#FFFFFF",
+                                          borderWidth: "2px",
+                                          borderStyle: "solid",
+                                          borderColor: "#1F2937",
+                                          boxShadow: "0 0 0 1px #1F2937",
+                                        }
+                                      : {
+                                          backgroundColor: color,
+                                          borderWidth: "0px",
+                                          borderStyle: "none",
+                                          borderColor: "transparent",
+                                          boxShadow: "none",
+                                        };
+
+                                    return (
+                                      <div
+                                        key={`${rowIndex}-${colIndex}`}
+                                        onMouseDown={() =>
+                                          handleMouseDown(
+                                            template.id,
+                                            rowIndex,
+                                            colIndex
+                                          )
+                                        }
+                                        onMouseEnter={() =>
+                                          handleMouseEnter(
+                                            template.id,
+                                            rowIndex,
+                                            colIndex
+                                          )
+                                        }
+                                        className={`aspect-square w-4 h-4 rounded-sm cursor-pointer transition-all print:cursor-default hover:ring-1 hover:ring-gray-400 print:hover:ring-0${
+                                          isEmpty
+                                            ? " bg-white border border-gray-200"
+                                            : ""
+                                        }`}
+                                        style={cellStyle}
+                                        title={`Row ${rowIndex + 1}, Col ${
+                                          colIndex + 1
+                                        }`}
+                                      />
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Visual grid representation - print only */}
+                            <TemplateMap
+                              templates={templates}
+                              currentTemplateId={template.id}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
-
-          <div
-            ref={gridRef}
-            className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print"
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
-            <div
-              className="grid gap-0.5"
-              style={{
-                gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
-              }}
-            >
-              {grid.map((row, rowIndex) =>
-                row.map((color, colIndex) => {
-                  const isEmpty = !color;
-                  const isWhite = color === "#FFFFFF";
-
-                  const cellStyle = isEmpty
-                    ? {
-                        backgroundColor: "#FFFFFF",
-                        borderWidth: "1px",
-                        borderStyle: "solid",
-                        borderColor: "#E5E7EB",
-                        boxShadow: "none",
-                      }
-                    : isWhite
-                    ? {
-                        backgroundColor: "#FFFFFF",
-                        borderWidth: "2px",
-                        borderStyle: "solid",
-                        borderColor: "#1F2937",
-                        boxShadow: "0 0 0 1px #1F2937",
-                      }
-                    : {
-                        backgroundColor: color,
-                        borderWidth: "0px",
-                        borderStyle: "none",
-                        borderColor: "transparent",
-                        boxShadow: "none",
-                      };
+        </ScrollArea>
+        {/* Print mode - no scroll area */}
+        <div className="hidden print:flex print:flex-col print:items-center p-6 print:p-0">
+          {arrangedTemplates.map((row, rowIndex) => {
+            return (
+              <div
+                key={rowIndex}
+                className="flex items-start justify-center print:block print:justify-center"
+                style={{
+                  width: "max-content",
+                  minWidth: "100%",
+                  gap: "0.25rem",
+                }}
+              >
+                {row.map((template, colIndex) => {
+                  if (!template) {
+                    return (
+                      <div
+                        key={`empty-${rowIndex}-${colIndex}`}
+                        className="print:hidden"
+                        style={{
+                          width: "544px",
+                          minHeight: 0,
+                          flexShrink: 0,
+                          boxSizing: "content-box",
+                        }}
+                      />
+                    );
+                  }
 
                   return (
                     <div
-                      key={`${rowIndex}-${colIndex}`}
-                      onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                      onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                      className={`aspect-square w-4 h-4 rounded-sm cursor-pointer transition-all print:cursor-default hover:ring-1 hover:ring-gray-400 print:hover:ring-0${
-                        isEmpty ? " bg-white border border-gray-200" : ""
-                      }`}
-                      style={cellStyle}
-                      title={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
-                    />
+                      key={template.id}
+                      className="template-container print:break-after-page print:break-inside-avoid relative print:w-full print:mb-0"
+                      style={{
+                        flexShrink: 0,
+                        width: "544px",
+                        boxSizing: "content-box",
+                      }}
+                    >
+                      <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-4 print:bg-transparent relative">
+                        <div className="flex flex-col items-center relative">
+                          <div className="hidden print:block text-center mb-2 text-sm font-medium text-gray-700">
+                            Position: {template.x}:{template.y}
+                          </div>
+                          <div
+                            className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1"
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                          >
+                            <div
+                              className="grid gap-0.5"
+                              style={{
+                                gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+                              }}
+                            >
+                              {template.grid.map((row, rowIndex) =>
+                                row.map((color, colIndex) => {
+                                  const isEmpty = !color;
+                                  const isWhite = color === "#FFFFFF";
+
+                                  const cellStyle = isEmpty
+                                    ? {
+                                        backgroundColor: "#FFFFFF",
+                                        borderWidth: "1px",
+                                        borderStyle: "solid",
+                                        borderColor: "#E5E7EB",
+                                        boxShadow: "none",
+                                      }
+                                    : isWhite
+                                    ? {
+                                        backgroundColor: "#FFFFFF",
+                                        borderWidth: "2px",
+                                        borderStyle: "solid",
+                                        borderColor: "#1F2937",
+                                        boxShadow: "0 0 0 1px #1F2937",
+                                      }
+                                    : {
+                                        backgroundColor: color,
+                                        borderWidth: "0px",
+                                        borderStyle: "none",
+                                        borderColor: "transparent",
+                                        boxShadow: "none",
+                                      };
+
+                                  return (
+                                    <div
+                                      key={`${rowIndex}-${colIndex}`}
+                                      className={`aspect-square w-4 h-4 rounded-sm cursor-pointer transition-all print:cursor-default hover:ring-1 hover:ring-gray-400 print:hover:ring-0${
+                                        isEmpty
+                                          ? " bg-white border border-gray-200"
+                                          : ""
+                                      }`}
+                                      style={cellStyle}
+                                      title={`Row ${rowIndex + 1}, Col ${
+                                        colIndex + 1
+                                      }`}
+                                    />
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Visual grid representation - print only */}
+                          <TemplateMap
+                            templates={templates}
+                            currentTemplateId={template.id}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   );
-                })
-              )}
-            </div>
-          </div>
-          <div className="flex justify-end mt-4 print:hidden">
-            <div className="flex gap-2">
-              <button
-                onClick={saveDesign}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium print:hidden flex items-center gap-2"
-                title="Save design to browser storage"
-              >
-                <Save size={18} />
-                Save
-              </button>
-              <button
-                onClick={loadDesign}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium print:hidden flex items-center gap-2 ${
-                  hasSaved
-                    ? "bg-purple-500 text-white hover:bg-purple-600"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-                title="Load saved design"
-                disabled={!hasSaved}
-              >
-                <Download size={18} />
-                Load
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {sortedColors.length > 0 && (
-          <div className="bg-white rounded-lg shadow-xl p-6 print:shadow-none print:p-4 print:break-inside-avoid">
-            <h2 className="text-xl font-semibold mb-4 text-gray-700 print:text-lg">
-              Color Quantities
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 print:grid-cols-3">
-              {sortedColors.map(({ name, value, count }) => (
-                <div
-                  key={value}
-                  className="flex items-center gap-3 print:gap-2"
-                >
-                  <div
-                    className="w-8 h-8 rounded border-2 border-gray-300 print:w-6 print:h-6 shrink-0"
-                    style={{ backgroundColor: value }}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800 print:text-sm">
-                      {name}
-                    </div>
-                    <div className="text-sm text-gray-600 print:text-xs">
-                      {count} bead{count !== 1 ? "s" : ""}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow-xl p-6 print:hidden">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">
-            Instructions
-          </h2>
-          <ul className="list-disc list-inside space-y-2 text-gray-600">
-            <li>Select a color from the palette above</li>
-            <li>Click on a grid cell to place a bead</li>
-            <li>Hold and drag to place multiple beads</li>
-            <li>Click on a colored bead to remove it</li>
-            <li>
-              Use the &quot;Paint Can&quot; tool to fill connected areas of the
-              same color
-            </li>
-            <li>Use &quot;Clear Grid&quot; to start over</li>
-          </ul>
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
+      <Wrapper>
+        <SaveLoadButtons
+          onSave={saveDesign}
+          onLoad={loadDesign}
+          hasSaved={hasSaved}
+          saveMessage={saveMessage}
+        />
+
+        <ColorQuantities colors={sortedColors} />
+        <Instructions />
+      </Wrapper>
     </div>
   );
 }
