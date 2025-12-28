@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Set minimum site width to 5.75 inches */
+.main-container {
+  min-width: 980px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media print {
+  @page {
+    margin: 1cm;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  
+  body {
+    background: white !important;
+  }
+  
+  /* Preserve all colors for printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Override gradient background for main container only */
+  .main-container {
+    background: white !important;
+    background-image: none !important;
+  }
+  
+  /* Ensure bead colors are preserved (inline styles take precedence) */
+  [style*="backgroundColor"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Make the grid container exactly 5.75 inches for printing (including border) */
+  /* Border: 2px = 0.0208in each side */
+  /* With border-box, the 5.75in includes border, so inner content is smaller */
+  .grid-container-print {
+    width: 5.75in !important;
+    height: 5.75in !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    border-width: 2px !important;
+  }
+  
+  /* Grid with 29 columns, using a small gap */
+  /* CSS Grid will automatically size cells to fit the available space */
+  .grid-container-print .grid {
+    width: 100% !important;
+    height: 100% !important;
+    gap: 0.008in !important;
+  }
+  
+  .grid-container-print .grid > div {
+    aspect-ratio: 1 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
 }
