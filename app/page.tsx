@@ -1,10 +1,11 @@
 "use client";
 
-import { ColorQuantities } from "@/components/color-quantities";
+import { BeadQuantitiesList } from "@/components/bead-quantities-list";
 import { ColorSelector } from "@/components/color-selector";
 import { Instructions } from "@/components/instructions";
 import { PageHeader } from "@/components/page-header";
 import { SaveLoadButtons } from "@/components/save-load-buttons";
+import { TemplateColorQuantities } from "@/components/template-color-quantities";
 import { TemplateMap } from "@/components/template-map";
 import { TemplatesHeader } from "@/components/templates-header";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -49,6 +50,8 @@ export default function Home() {
   const [drawingTemplateId, setDrawingTemplateId] = useState<string | null>(
     null
   );
+  const [showIndividualColors, setShowIndividualColors] = useState(false);
+  const [showOverallColors, setShowOverallColors] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -302,6 +305,18 @@ export default function Home() {
     return quantities;
   }, [templates]);
 
+  const calculateTemplateColorQuantities = useCallback((template: Template) => {
+    const quantities: Record<string, number> = {};
+    template.grid.forEach((row) => {
+      row.forEach((color) => {
+        if (color) {
+          quantities[color] = (quantities[color] || 0) + 1;
+        }
+      });
+    });
+    return quantities;
+  }, []);
+
   // Create a memoized map of template positions for fast lookup
   const templatePositionMap = useMemo(() => {
     const map = new Set<string>();
@@ -422,7 +437,14 @@ export default function Home() {
           colors={BEAD_COLORS}
         />
 
-        <TemplatesHeader onPrint={handlePrint} />
+        <TemplatesHeader
+          onPrint={handlePrint}
+          showIndividualColors={showIndividualColors}
+          showOverallColors={showOverallColors}
+          onShowIndividualColorsChange={setShowIndividualColors}
+          onShowOverallColorsChange={setShowOverallColors}
+          isSingleTemplate={templates.length === 1}
+        />
       </Wrapper>
       <div className="print:space-y-0 w-full print:overflow-visible">
         <ScrollArea className="w-full print:hidden">
@@ -740,6 +762,13 @@ export default function Home() {
                               currentTemplateId={template.id}
                             />
                           )}
+                          <TemplateColorQuantities
+                            template={template}
+                            showIndividualColors={showIndividualColors}
+                            calculateTemplateColorQuantities={
+                              calculateTemplateColorQuantities
+                            }
+                          />
                         </div>
                       </div>
                     </div>
@@ -750,15 +779,23 @@ export default function Home() {
           })}
         </div>
       </div>
-      <Wrapper>
+      <Wrapper className="print:hidden">
         <SaveLoadButtons
           onSave={saveDesign}
           onLoad={loadDesign}
           hasSaved={hasSaved}
           saveMessage={saveMessage}
         />
-
-        <ColorQuantities colors={sortedColors} />
+      </Wrapper>
+      {showOverallColors ? (
+        <div className="mx-auto max-w-lg print:block hidden print:break-inside-avoid">
+          <BeadQuantitiesList
+            title="Total bead quantities"
+            colors={sortedColors}
+          />
+        </div>
+      ) : null}
+      <Wrapper className="print:hidden">
         <Instructions />
       </Wrapper>
     </div>
