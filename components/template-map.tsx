@@ -12,10 +12,12 @@ interface TemplateMapProps {
   currentTemplateId: string;
 }
 
-export function TemplateMap({ templates, currentTemplateId }: TemplateMapProps) {
+export function TemplateMap({
+  templates,
+  currentTemplateId,
+}: TemplateMapProps) {
   const getGridBounds = () => {
-    if (templates.length === 0)
-      return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+    if (templates.length === 0) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
     const minX = Math.min(...templates.map((t) => t.x));
     const maxX = Math.max(...templates.map((t) => t.x));
     const minY = Math.min(...templates.map((t) => t.y));
@@ -32,10 +34,7 @@ export function TemplateMap({ templates, currentTemplateId }: TemplateMapProps) 
       const templateAtPos = templates.find((t) => t.x === x && t.y === y);
       const isCurrent = templateAtPos?.id === currentTemplateId;
       cols.push(
-        <div
-          key={`${x}-${y}`}
-          className="flex items-center justify-center"
-        >
+        <div key={`${x}-${y}`} className="flex items-center justify-center">
           {isCurrent ? (
             <SquareCheck size={12} className="text-gray-800" />
           ) : templateAtPos ? (
@@ -54,12 +53,9 @@ export function TemplateMap({ templates, currentTemplateId }: TemplateMapProps) 
   }
 
   return (
-    <div className="hidden print:block mt-4">
-      <div className="text-xs text-gray-600 mb-2 text-center">
-        Template Map
-      </div>
+    <div className="template-map mt-4 pt-12">
+      <div className="text-xs text-gray-600 mb-2 text-center">Template Map</div>
       <div className="flex flex-col items-center gap-1">{rows}</div>
     </div>
   );
 }
-

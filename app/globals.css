@@ -17,11 +17,42 @@
 
 @media print {
   @page {
-    margin: 1cm;
+    size: 8.5in 11in;
+    margin: 0.5in 0 0 0 !important;
+    /* Explicit page size and top padding for print */
+  }
+  
+  /* Force page to not scale by setting explicit dimensions */
+  @page :first {
+    size: 8.5in 11in;
+    margin: 0.5in 0 0 0 !important;
   }
 
+  /* Force exact sizing - prevent any browser scaling */
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  
+  /* Prevent any scaling transformations - critical for consistent sizing */
+  html {
+    zoom: 1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 16px !important; /* Fixed base font size */
+  }
+  
   body {
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
     background: white !important;
+    font-size: 16px !important; /* Fixed base font size */
   }
 
   /* Preserve all colors for printing */
@@ -34,39 +65,18 @@
   .main-container {
     background: white !important;
     background-image: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
   }
 
   /* Ensure bead colors are preserved (inline styles take precedence) */
   [style*="backgroundColor"] {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-
-  /* Make the grid container exactly 5.75 inches for printing (including border) */
-  /* Border: 2px = 0.0208in each side */
-  /* With border-box, the 5.75in includes border, so inner content is smaller */
-  .grid-container-print {
-    width: 5.75in !important;
-    height: 5.75in !important;
-    box-sizing: border-box !important;
-    padding: 0 !important;
-    border-width: 2px !important;
-  }
-
-  /* Grid with 29 columns, using a small gap */
-  /* CSS Grid will automatically size cells to fit the available space */
-  .grid-container-print .grid {
-    width: 100% !important;
-    height: 100% !important;
-    gap: 0.008in !important;
-  }
-
-  .grid-container-print .grid > div {
-    aspect-ratio: 1 !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    width: calc(5.75in / 29 - 0.008in) !important;
-    height: calc(5.75in / 29 - 0.008in) !important;
   }
 
   /* Each template prints on its own page */
@@ -77,18 +87,133 @@
     break-inside: avoid !important;
     display: block !important;
     width: 100% !important;
-    margin-bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-top: 0.4in !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+  }
+
+  /* Override inline width styles on template container */
+  .template-container[style],
+  .template-container[style*="width"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Remove all padding/margin from wrapper divs in print */
+  .template-container > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+  }
+
+
+  .template-container > div > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    zoom: 1 !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+  }
+
+  /* Ensure parent containers don't constrain the grid */
+  .template-container > div > div > div {
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* Grid container: exactly 5.75 inches for printing */
+  /* CRITICAL: Browser scales content when margins change */
+  /* Scale factor observed: 4.787/5.75 = 0.8327, so scale back by 1/0.8327 = 1.201 */
+  /* This counteracts the browser's automatic scaling */
+  .grid-container-print {
+    width: 5.75in !important;
+    height: 5.75in !important;
+    max-width: 5.75in !important;
+    max-height: 5.75in !important;
+    min-width: 5.75in !important;
+    min-height: 5.75in !important;
+    box-sizing: border-box !important;
+    border: 2px solid rgb(31, 41, 55) !important; /* gray-800 */
+    padding: 0 !important;
+    margin: 0 auto !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    /* Counteract browser scaling - scale back up to get true 5.75in */
+    transform: scale(1.201) !important;
+    -webkit-transform: scale(1.201) !important;
+    -moz-transform: scale(1.201) !important;
+    transform-origin: center center !important;
+    zoom: 1 !important;
+    -webkit-zoom: 1 !important;
+    overflow: hidden !important;
+    position: relative !important;
+    font-size: 16px !important;
+  }
+
+  /* Inner grid: fills 100% of container with uniform 29x29 layout */
+  /* Available space: 5.75in - 0.0416in (border) = 5.7084in */
+  /* CSS Grid fr units automatically distribute space uniformly */
+  .grid-container-print .grid {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(29, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(29, minmax(0, 1fr)) !important;
+    /* Uniform gap: calculated to ensure even spacing */
+    /* 28 gaps between 29 cells, using small fixed gap for uniformity */
+    gap: 0.008in !important;
+    box-sizing: border-box !important;
+    align-content: stretch !important; /* Ensure grid fills container */
+    justify-content: stretch !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    zoom: 1 !important;
+  }
+
+  /* Grid cells: square aspect ratio, uniform sizing via CSS Grid */
+  .grid-container-print .grid > div {
+    aspect-ratio: 1 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    zoom: 1 !important;
+    transform: scale(1) !important;
+    -webkit-transform: scale(1) !important;
+    -moz-transform: scale(1) !important;
   }
 }
 
-/* Ensure grid maintains fixed size on screen */
-/* Calculate: 29 cells * 16px (w-4) + 28 gaps * 2px (gap-0.5) = 464px + 56px = 520px */
-.grid-container-print {
-  width: 520px;
-  height: 520px;
-  flex-shrink: 0;
-  box-sizing: content-box;
+/* Screen styles: maintain fixed size */
+@media not print {
+  .grid-container-print {
+    width: 520px;
+    height: 520px;
+    flex-shrink: 0;
+    box-sizing: content-box;
+  }
 }
+
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

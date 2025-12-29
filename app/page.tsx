@@ -410,7 +410,7 @@ export default function Home() {
     .sort((a, b) => b.count - a.count);
 
   return (
-    <div className="main-container min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-8 print:bg-white print:bg-none print:p-4">
+    <div className="main-container min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-8 print:bg-white print:bg-none print:p-0">
       <Wrapper>
         <PageHeader />
 
@@ -487,7 +487,7 @@ export default function Home() {
                           boxSizing: "content-box",
                         }}
                       >
-                        <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-4 print:bg-transparent relative">
+                        <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-0 print:bg-transparent relative">
                           {/* Plus buttons positioned absolutely */}
                           {!hasTop && (
                             <button
@@ -530,9 +530,6 @@ export default function Home() {
                           )}
 
                           <div className="flex flex-col items-center relative">
-                            <div className="hidden print:block text-center mb-2 text-sm font-medium text-gray-700">
-                              Position: {template.x}:{template.y}
-                            </div>
                             {/* Remove button - top right, outside grid */}
                             {isRemovable && (
                               <button
@@ -552,14 +549,15 @@ export default function Home() {
                               <Eraser size={14} className="text-white" />
                             </button>
                             <div
-                              className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1"
+                              className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1 print:p-0"
                               onMouseUp={handleMouseUp}
                               onMouseLeave={handleMouseUp}
                             >
                               <div
-                                className="grid gap-0.5"
+                                className="grid gap-0.5 print:gap-[0.008in]"
                                 style={{
                                   gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+                                  gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
                                 }}
                               >
                                 {template.grid.map((row, rowIndex) =>
@@ -572,7 +570,7 @@ export default function Home() {
                                           backgroundColor: "#FFFFFF",
                                           borderWidth: "1px",
                                           borderStyle: "solid",
-                                          borderColor: "#E5E7EB",
+                                          borderColor: "#D1D5DB",
                                           boxShadow: "none",
                                         }
                                       : isWhite
@@ -610,7 +608,7 @@ export default function Home() {
                                         }
                                         className={`aspect-square w-4 h-4 rounded-sm cursor-pointer transition-all print:cursor-default hover:ring-1 hover:ring-gray-400 print:hover:ring-0${
                                           isEmpty
-                                            ? " bg-white border border-gray-200"
+                                            ? " bg-white border border-gray-300"
                                             : ""
                                         }`}
                                         style={cellStyle}
@@ -623,12 +621,6 @@ export default function Home() {
                                 )}
                               </div>
                             </div>
-
-                            {/* Visual grid representation - print only */}
-                            <TemplateMap
-                              templates={templates}
-                              currentTemplateId={template.id}
-                            />
                           </div>
                         </div>
                       </div>
@@ -678,20 +670,21 @@ export default function Home() {
                         boxSizing: "content-box",
                       }}
                     >
-                      <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-4 print:bg-transparent relative">
+                      <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-0 print:bg-transparent relative">
                         <div className="flex flex-col items-center relative">
                           <div className="hidden print:block text-center mb-2 text-sm font-medium text-gray-700">
                             Position: {template.x}:{template.y}
                           </div>
                           <div
-                            className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1"
+                            className="inline-block border-2 border-gray-300 rounded-lg bg-gray-50 print:border-gray-800 grid-container-print relative p-1 print:p-0"
                             onMouseUp={handleMouseUp}
                             onMouseLeave={handleMouseUp}
                           >
                             <div
-                              className="grid gap-0.5"
+                              className="grid gap-0.5 print:gap-[0.008in]"
                               style={{
                                 gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+                                gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
                               }}
                             >
                               {template.grid.map((row, rowIndex) =>
@@ -704,7 +697,7 @@ export default function Home() {
                                         backgroundColor: "#FFFFFF",
                                         borderWidth: "1px",
                                         borderStyle: "solid",
-                                        borderColor: "#E5E7EB",
+                                        borderColor: "#D1D5DB",
                                         boxShadow: "none",
                                       }
                                     : isWhite
@@ -741,12 +734,12 @@ export default function Home() {
                               )}
                             </div>
                           </div>
-
-                          {/* Visual grid representation - print only */}
-                          <TemplateMap
-                            templates={templates}
-                            currentTemplateId={template.id}
-                          />
+                          {templates.length > 1 && (
+                            <TemplateMap
+                              templates={templates}
+                              currentTemplateId={template.id}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
