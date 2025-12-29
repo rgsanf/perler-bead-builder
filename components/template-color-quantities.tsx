@@ -14,23 +14,37 @@ interface TemplateColorQuantitiesProps {
   calculateTemplateColorQuantities: (
     template: Template
   ) => Record<string, number>;
+  customColors: (string | null)[];
 }
 
 export function TemplateColorQuantities({
   template,
   showIndividualColors,
   calculateTemplateColorQuantities,
+  customColors,
 }: TemplateColorQuantitiesProps) {
   if (!showIndividualColors) {
     return null;
   }
 
+  const getColorName = (colorValue: string) => {
+    const colorInfo = BEAD_COLORS.find((c) => c.value === colorValue);
+    if (colorInfo) return colorInfo.name;
+
+    // Check if it's a custom color
+    const customIndex = customColors.findIndex((c) => c === colorValue);
+    if (customIndex !== -1) {
+      return `Custom ${customIndex + 1}`;
+    }
+
+    return "Unknown";
+  };
+
   const templateQuantities = calculateTemplateColorQuantities(template);
   const templateSortedColors = Object.entries(templateQuantities)
     .map(([value, count]) => {
-      const colorInfo = BEAD_COLORS.find((c) => c.value === value);
       return {
-        name: colorInfo?.name || "Unknown",
+        name: getColorName(value),
         value,
         count,
       };

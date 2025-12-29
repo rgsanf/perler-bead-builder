@@ -12,6 +12,10 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Wrapper } from "@/components/wrapper";
 import {
   BEAD_COLORS,
+  BEAD_COLORS_ROW1,
+  BEAD_COLORS_ROW2,
+  CUSTOM_COLOR_SLOTS,
+  CUSTOM_COLORS_STORAGE_KEY,
   GRID_SIZE,
   STORAGE_KEY,
 } from "@/lib/perler-bead.constants";
@@ -52,6 +56,9 @@ export default function Home() {
   );
   const [showIndividualColors, setShowIndividualColors] = useState(false);
   const [showOverallColors, setShowOverallColors] = useState(true);
+  const [customColors, setCustomColors] = useState<(string | null)[]>(
+    Array(CUSTOM_COLOR_SLOTS).fill(null)
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -60,6 +67,24 @@ export default function Home() {
 
       // Use setTimeout to defer state updates and avoid linter warning
       setTimeout(() => {
+        // Load custom colors
+        const savedCustomColors = localStorage.getItem(
+          CUSTOM_COLORS_STORAGE_KEY
+        );
+        if (savedCustomColors) {
+          try {
+            const parsedColors = JSON.parse(savedCustomColors);
+            if (
+              Array.isArray(parsedColors) &&
+              parsedColors.length === CUSTOM_COLOR_SLOTS
+            ) {
+              setCustomColors(parsedColors);
+            }
+          } catch (e) {
+            console.error("Failed to load custom colors:", e);
+          }
+        }
+
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -104,6 +129,10 @@ export default function Home() {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+        localStorage.setItem(
+          CUSTOM_COLORS_STORAGE_KEY,
+          JSON.stringify(customColors)
+        );
         setSaveMessage("Design saved!");
         setHasSaved(true);
         setTimeout(() => setSaveMessage(""), 2000);
@@ -113,7 +142,7 @@ export default function Home() {
         setTimeout(() => setSaveMessage(""), 2000);
       }
     }
-  }, [templates]);
+  }, [templates, customColors]);
 
   const loadDesign = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -149,6 +178,25 @@ export default function Home() {
               y: t.y ?? 0,
             }))
           );
+
+          // Load custom colors
+          const savedCustomColors = localStorage.getItem(
+            CUSTOM_COLORS_STORAGE_KEY
+          );
+          if (savedCustomColors) {
+            try {
+              const parsedColors = JSON.parse(savedCustomColors);
+              if (
+                Array.isArray(parsedColors) &&
+                parsedColors.length === CUSTOM_COLOR_SLOTS
+              ) {
+                setCustomColors(parsedColors);
+              }
+            } catch (e) {
+              console.error("Failed to load custom colors:", e);
+            }
+          }
+
           setSaveMessage("Design loaded!");
           setTimeout(() => setSaveMessage(""), 2000);
         } catch (e) {
@@ -423,12 +471,42 @@ export default function Home() {
       : null;
   }, [arrangedTemplates, templates.length]);
 
+  const getColorName = useCallback(
+    (colorValue: string) => {
+      const colorInfo = BEAD_COLORS.find((c) => c.value === colorValue);
+      if (colorInfo) return colorInfo.name;
+
+      // Check if it's a custom color
+      const customIndex = customColors.findIndex((c) => c === colorValue);
+      if (customIndex !== -1) {
+        return `Custom ${customIndex + 1}`;
+      }
+
+      return "Unknown";
+    },
+    [customColors]
+  );
+
+  const handleCustomColorChange = useCallback(
+    (index: number, color: string | null) => {
+      setCustomColors((prev) => {
+        const newColors = [...prev];
+        newColors[index] = color;
+        return newColors;
+      });
+    },
+    []
+  );
+
+  const handlePaintCanModeToggle = useCallback(() => {
+    setPaintCanMode((prev) => !prev);
+  }, []);
+
   const colorQuantities = calculateColorQuantities();
   const sortedColors = Object.entries(colorQuantities)
     .map(([value, count]) => {
-      const colorInfo = BEAD_COLORS.find((c) => c.value === value);
       return {
-        name: colorInfo?.name || "Unknown",
+        name: getColorName(value),
         value,
         count,
       };
@@ -444,8 +522,11 @@ export default function Home() {
           selectedColor={selectedColor}
           onColorSelect={setSelectedColor}
           paintCanMode={paintCanMode}
-          onPaintCanModeToggle={() => setPaintCanMode(!paintCanMode)}
-          colors={BEAD_COLORS}
+          onPaintCanModeToggle={handlePaintCanModeToggle}
+          colorsRow1={BEAD_COLORS_ROW1}
+          colorsRow2={BEAD_COLORS_ROW2}
+          customColors={customColors}
+          onCustomColorChange={handleCustomColorChange}
         />
 
         <TemplatesHeader
@@ -787,6 +868,7 @@ export default function Home() {
                             calculateTemplateColorQuantities={
                               calculateTemplateColorQuantities
                             }
+                            customColors={customColors}
                           />
                         </div>
                       </div>
