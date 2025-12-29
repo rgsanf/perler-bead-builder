@@ -98,6 +98,12 @@
     -moz-transform: none !important;
   }
 
+  /* Override page break for last template when showOverallColors is false */
+  .template-container.no-break-after-last {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
   /* Override inline width styles on template container */
   .template-container[style],
   .template-container[style*="width"] {

@@ -41,7 +41,7 @@ export function TemplateColorQuantities({
     <div className="mt-4 print:block">
       {showIndividualColors && (
         <BeadQuantitiesList
-          title="Individual template bead quantities"
+          title="Template bead quantities"
           colors={templateSortedColors}
         />
       )}

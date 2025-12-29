@@ -37,8 +37,6 @@ export function ColorSelector({
           title="Paint Can Tool - Fill connected areas"
         >
           <PaintBucket size={18} />
-          <span>Paint Can</span>
-          {paintCanMode && <span className="ml-1 text-xs font-bold">ON</span>}
         </button>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-3">

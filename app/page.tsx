@@ -412,6 +412,17 @@ export default function Home() {
     window.print();
   }, []);
 
+  // Find the last template ID to conditionally prevent page break
+  const lastTemplateId = useMemo(() => {
+    if (templates.length === 0) return null;
+    const allTemplates = arrangedTemplates
+      .flat()
+      .filter((t): t is Template => t !== null);
+    return allTemplates.length > 0
+      ? allTemplates[allTemplates.length - 1].id
+      : null;
+  }, [arrangedTemplates, templates.length]);
+
   const colorQuantities = calculateColorQuantities();
   const sortedColors = Object.entries(colorQuantities)
     .map(([value, count]) => {
@@ -682,10 +693,18 @@ export default function Home() {
                     );
                   }
 
+                  const isLastTemplate = lastTemplateId === template.id;
+                  const shouldBreakAfterPage =
+                    !isLastTemplate || showOverallColors;
+
                   return (
                     <div
                       key={template.id}
-                      className="template-container print:break-after-page print:break-inside-avoid relative print:w-full print:mb-0"
+                      className={`template-container print:break-inside-avoid relative print:w-full print:mb-0 ${
+                        shouldBreakAfterPage
+                          ? "print:break-after-page"
+                          : "no-break-after-last"
+                      }`}
                       style={{
                         flexShrink: 0,
                         width: "544px",

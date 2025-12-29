@@ -57,7 +57,7 @@ export function TemplatesHeader({
                       htmlFor="individual-colors"
                       className="cursor-not-allowed opacity-50"
                     >
-                      Individual template bead quantities
+                      Template bead quantities
                     </Label>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -69,7 +69,7 @@ export function TemplatesHeader({
                 </Tooltip>
               ) : (
                 <Label htmlFor="individual-colors">
-                  Individual template bead quantities
+                  Template bead quantities
                 </Label>
               )}
             </div>
