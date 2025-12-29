@@ -1,4 +1,4 @@
-import { PaintBucket, Plus, X } from "lucide-react";
+import { Eraser, PaintBucket, Plus, X } from "lucide-react";
 import {
   memo,
   startTransition,
@@ -18,6 +18,8 @@ interface ColorSelectorProps {
   onColorSelect: (color: string) => void;
   paintCanMode: boolean;
   onPaintCanModeToggle: () => void;
+  eraserMode: boolean;
+  onEraserModeToggle: () => void;
   colorsRow1: BeadColor[];
   colorsRow2: BeadColor[];
   customColors: (string | null)[];
@@ -29,6 +31,8 @@ export const ColorSelector = memo(function ColorSelector({
   onColorSelect,
   paintCanMode,
   onPaintCanModeToggle,
+  eraserMode,
+  onEraserModeToggle,
   colorsRow1,
   colorsRow2,
   customColors,
@@ -279,20 +283,36 @@ export const ColorSelector = memo(function ColorSelector({
     <div className="bg-white rounded-lg shadow-xl p-6 mb-6 print:hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-700">Select Color</h2>
-        <button
-          onClick={onPaintCanModeToggle}
-          className={`
-            px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 border-2
-            ${
-              paintCanMode
-                ? "bg-green-500 text-white border-green-600 hover:bg-green-600 ring-2 ring-green-300 ring-offset-2"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-            }
-          `}
-          title="Paint Can Tool - Fill connected areas"
-        >
-          <PaintBucket size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEraserModeToggle}
+            className={`
+              px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 border-2
+              ${
+                eraserMode
+                  ? "bg-red-500 text-white border-red-600 hover:bg-red-600 ring-2 ring-red-300 ring-offset-2"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+              }
+            `}
+            title="Eraser Tool - Remove beads"
+          >
+            <Eraser size={18} />
+          </button>
+          <button
+            onClick={onPaintCanModeToggle}
+            className={`
+              px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 border-2
+              ${
+                paintCanMode
+                  ? "bg-green-500 text-white border-green-600 hover:bg-green-600 ring-2 ring-green-300 ring-offset-2"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+              }
+            `}
+            title="Paint Can Tool - Fill connected areas"
+          >
+            <PaintBucket size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Row 1: Primary/Bright Colors */}

@@ -49,6 +49,7 @@ export default function Home() {
   );
   const [isDrawing, setIsDrawing] = useState(false);
   const [paintCanMode, setPaintCanMode] = useState(false);
+  const [eraserMode, setEraserMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string>("");
   const [hasSaved, setHasSaved] = useState<boolean>(false);
   const [drawingTemplateId, setDrawingTemplateId] = useState<string | null>(
@@ -213,7 +214,17 @@ export default function Home() {
 
   const handleBeadClick = useCallback(
     (templateId: string, row: number, col: number) => {
-      if (paintCanMode) {
+      if (eraserMode) {
+        setTemplates((prev) =>
+          prev.map((template) => {
+            if (template.id !== templateId) return template;
+            const newGrid = [...template.grid];
+            newGrid[row] = [...newGrid[row]];
+            newGrid[row][col] = "";
+            return { ...template, grid: newGrid };
+          })
+        );
+      } else if (paintCanMode) {
         setTemplates((prev) =>
           prev.map((template) => {
             if (template.id !== templateId) return template;
@@ -251,14 +262,13 @@ export default function Home() {
             if (template.id !== templateId) return template;
             const newGrid = [...template.grid];
             newGrid[row] = [...newGrid[row]];
-            newGrid[row][col] =
-              template.grid[row][col] === selectedColor ? "" : selectedColor;
+            newGrid[row][col] = selectedColor;
             return { ...template, grid: newGrid };
           })
         );
       }
     },
-    [selectedColor, paintCanMode]
+    [selectedColor, paintCanMode, eraserMode]
   );
 
   const handleMouseDown = useCallback(
@@ -500,6 +510,12 @@ export default function Home() {
 
   const handlePaintCanModeToggle = useCallback(() => {
     setPaintCanMode((prev) => !prev);
+    setEraserMode(false); // Disable eraser when enabling paint can
+  }, []);
+
+  const handleEraserModeToggle = useCallback(() => {
+    setEraserMode((prev) => !prev);
+    setPaintCanMode(false); // Disable paint can when enabling eraser
   }, []);
 
   const colorQuantities = calculateColorQuantities();
@@ -523,6 +539,8 @@ export default function Home() {
           onColorSelect={setSelectedColor}
           paintCanMode={paintCanMode}
           onPaintCanModeToggle={handlePaintCanModeToggle}
+          eraserMode={eraserMode}
+          onEraserModeToggle={handleEraserModeToggle}
           colorsRow1={BEAD_COLORS_ROW1}
           colorsRow2={BEAD_COLORS_ROW2}
           customColors={customColors}
