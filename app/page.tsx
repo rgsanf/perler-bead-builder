@@ -647,7 +647,7 @@ export default function Home() {
                           boxSizing: "content-box",
                         }}
                       >
-                        <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-0 print:bg-transparent relative">
+                        <div className="bg-white rounded-lg shadow-md p-3 print:shadow-none print:p-0 print:bg-transparent relative">
                           {/* Plus buttons positioned absolutely */}
                           {!hasTop && (
                             <button
@@ -838,7 +838,7 @@ export default function Home() {
                         boxSizing: "content-box",
                       }}
                     >
-                      <div className="bg-white rounded-lg shadow-xl p-3 print:shadow-none print:p-0 print:bg-transparent relative">
+                      <div className="bg-white rounded-lg shadow-md p-3 print:shadow-none print:p-0 print:bg-transparent relative">
                         <div className="flex flex-col items-center relative">
                           <div className="hidden print:block text-center mb-2 text-sm font-medium text-gray-700">
                             Position: {template.x}:{template.y}
