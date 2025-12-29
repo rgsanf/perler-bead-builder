@@ -75,11 +75,17 @@ export default function Home() {
         if (savedCustomColors) {
           try {
             const parsedColors = JSON.parse(savedCustomColors);
-            if (
-              Array.isArray(parsedColors) &&
-              parsedColors.length === CUSTOM_COLOR_SLOTS
-            ) {
-              setCustomColors(parsedColors);
+            if (Array.isArray(parsedColors) && parsedColors.length > 0) {
+              // Ensure array length is a multiple of 10 (for row integrity)
+              const slotsPerRow = 10;
+              const currentLength = parsedColors.length;
+              const targetLength =
+                Math.ceil(currentLength / slotsPerRow) * slotsPerRow;
+              const paddedColors = [...parsedColors];
+              while (paddedColors.length < targetLength) {
+                paddedColors.push(null);
+              }
+              setCustomColors(paddedColors);
             }
           } catch (e) {
             console.error("Failed to load custom colors:", e);
@@ -187,11 +193,17 @@ export default function Home() {
           if (savedCustomColors) {
             try {
               const parsedColors = JSON.parse(savedCustomColors);
-              if (
-                Array.isArray(parsedColors) &&
-                parsedColors.length === CUSTOM_COLOR_SLOTS
-              ) {
-                setCustomColors(parsedColors);
+              if (Array.isArray(parsedColors) && parsedColors.length > 0) {
+                // Ensure array length is a multiple of 10 (for row integrity)
+                const slotsPerRow = 10;
+                const currentLength = parsedColors.length;
+                const targetLength =
+                  Math.ceil(currentLength / slotsPerRow) * slotsPerRow;
+                const paddedColors = [...parsedColors];
+                while (paddedColors.length < targetLength) {
+                  paddedColors.push(null);
+                }
+                setCustomColors(paddedColors);
               }
             } catch (e) {
               console.error("Failed to load custom colors:", e);
@@ -502,6 +514,22 @@ export default function Home() {
       setCustomColors((prev) => {
         const newColors = [...prev];
         newColors[index] = color;
+
+        // Check if all slots in the last row are filled
+        // Each row has 10 slots (grid-cols-10)
+        const slotsPerRow = 10;
+        const totalSlots = newColors.length;
+        const lastRowStart =
+          Math.floor((totalSlots - 1) / slotsPerRow) * slotsPerRow;
+        const lastRowEnd = lastRowStart + slotsPerRow;
+        const lastRow = newColors.slice(lastRowStart, lastRowEnd);
+
+        // If all slots in the last row are filled (not null), add a new row
+        if (lastRow.every((slot) => slot !== null)) {
+          // Add 10 more slots (a new row)
+          return [...newColors, ...Array(slotsPerRow).fill(null)];
+        }
+
         return newColors;
       });
     },
